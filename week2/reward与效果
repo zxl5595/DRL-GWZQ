@@ -1,0 +1,7 @@
+reward设置为fake goal和real goal都有一定reward时，agent容易掉进fake goal的陷阱
+reward设置为fake goal只有第一次有reward时，agent在训练初期依然容易掉进陷阱，在后期容易绕过fake goal直达终点
+reward设置为fake goal只有第一次有reward，抵达之后换用与real goal的距离（接近则为正，远离为负）时，依然容易绕过fake goal
+最终使用的reward：
+   未抵达fake goal时，若接近fake goal，reward为0.1，远离则为-0.1
+   抵达fake goal后，若接近real goal，reward为0.1，远离则为-0.1
+   real goal的reward为1
