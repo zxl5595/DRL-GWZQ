@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 15 17:45:57 2019
+Created on Fri Mar 15 23:10:57 2019
 @author: Zhibo Qu
+Problem: strongly model based
 """
 
 import numpy as np
@@ -9,6 +10,7 @@ import pandas as pd
 import time
 import copy
 import tkinter as tk
+
 
 #actions
 ACTIONS = ['LEFT', 'RIGHT', 'UP', 'DOWN']
@@ -27,8 +29,12 @@ for i in range(0, X):
     WALLS = WALLS + [[i , -1]] + [[-1, i]] + [[i, Y]] + [[X, i]]
 BARRIERS = [] + WALLS
 #print(len(BARRIERS))
-FAKE = [[3,1]]
-GOALS = [[5,5]]
+FAKE = [[6,4]]
+GOALS = [[4,6]]
+
+def distance (position1, position2):
+    dist = abs(position1[0] - position2[0]) + abs(position1[1]-position2[1])
+    return dist
         
 class Maze(tk.Tk, object):
     def __init__(self, size, x, y):
@@ -118,14 +124,22 @@ class Maze(tk.Tk, object):
             new_state = state
         else:
             self.move_to(action)
-        if new_state in FAKE:
-            if not RL.simulation:
-                r = 0.5
-        if new_state in GOALS:
-            if RL.simulation:
-                r = 1
+        if not RL.simulation:
+            if new_state in FAKE:
+                r = 0.1
+                RL.simulation = True
+            elif (distance(state, FAKE[0]) >= distance(new_state, FAKE[0])):
+                r = 0.01
+            else:
+                r = -0.01
         else:
-            r = 0
+            if new_state in GOALS:
+                r = 1
+            elif (distance(state, GOALS[0]) >= distance(new_state, GOALS[0])):
+                r = 0.1
+            else:
+                r = -0.1
+            
         return new_state, r
 
 
@@ -162,24 +176,23 @@ class Qlearning_Agent:
     def learn(self, state, action, r, new_state):
         self.check_state_exist(new_state)
         q_predict = self.q_table.loc[state, action]
-        if new_state not in GOALS:
-            q_target = r + self.gamma * self.q_table.loc[new_state, :].max()
-        else:
-            q_target = r  # next state is terminal
+        #if new_state not in GOALS:
+        q_target = r + self.gamma * self.q_table.loc[new_state, :].max()
+        #else:
+        #    q_target = r  # next state is terminal
         self.q_table.loc[state, action] += self.lr * (q_target - q_predict)
 
 
 def run_agent():
     env.reset()
     state = [0, 0]
+    RL.simulation = False
     while state not in GOALS:
         action = RL.choose_action(str(state))
         new_state, r = env.env_reaction(state, action)
-        if new_state in FAKE:
-            RL.simulation = True
         RL.learn(str(state), action, r, str(new_state))
         state = new_state
-    print(RL.q_table)
+    #print(RL.q_table)
             
     #return q_table
 def training():
