@@ -176,10 +176,10 @@ class Qlearning_Agent:
     def learn(self, state, action, r, new_state):
         self.check_state_exist(new_state)
         q_predict = self.q_table.loc[state, action]
-        #if new_state not in GOALS:
-        q_target = r + self.gamma * self.q_table.loc[new_state, :].max()
-        #else:
-        #    q_target = r  # next state is terminal
+        if new_state not in GOALS:
+            q_target = r + self.gamma * self.q_table.loc[new_state, :].max()
+        else:
+            q_target = r  # next state is terminal
         self.q_table.loc[state, action] += self.lr * (q_target - q_predict)
 
 
