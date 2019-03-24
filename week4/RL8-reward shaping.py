@@ -195,7 +195,7 @@ class Observer(object):
         if new_state in GOALS:
             r = 1
         else:
-            r = 0.01 * (3*(self.distance(state, GOALS[0]) - self.distance(new_state, GOALS[0])) + (self.distance(new_state, GOALS[0]) - self.distance(new_state, FAKE[0])))
+            r = 0.01 * (2*(self.distance(state, GOALS[0]) - self.distance(new_state, GOALS[0])) + (self.distance(state, FAKE[0]) - self.distance(new_state, FAKE[0])))
         
         return new_state, r
 
