@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Mar 24 15:13:00 2019
-@author: Xianglin ZHOU
+@author: ZHIBO QU
 Q learning agent with fake goal and observer
 """
 
@@ -19,7 +19,7 @@ GAMMA = 0.9
 ALPHA = 0.1
 EPSILON = 0.9
 LAMBDA = 0.9
-EPISODES = 30
+EPISODES = 60
 #map
 SIZE = 100
 X = 9
@@ -30,8 +30,9 @@ for i in range(0, X):
 BARRIERS = [] + WALLS
 #print(len(BARRIERS))
 #GOALS = [[5,5]]
-FAKE = [[7,4]] #fake goal
-GOALS = [[4,7]]
+START = [1,0]
+FAKE = [[0,7]] #fake goal
+GOALS = [[7,5]]
         
 class Maze(tk.Tk, object):
     def __init__(self, size, x, y):
@@ -44,7 +45,9 @@ class Maze(tk.Tk, object):
         self.x_total = x
         self.y_total = y
         self.geometry('1800x900')
+        self.start = START
         self._build_maze()
+        
         
     def _build_maze(self):
         self.canvas = tk.Canvas(self, bg = 'white', height = self.size * self.y_total, 
@@ -67,10 +70,8 @@ class Maze(tk.Tk, object):
 #        self.food = self.canvas.create_image(1510, 10, anchor='nw', image = food_file)
         self.food = self.canvas.create_rectangle(10 + self.goals[0][0]*self.size, 10 + self.goals[0][1]*self.size,(self.goals[0][0] + 1)*self.size - 10, (self.goals[0][1] + 1)*self.size - 10,fill = 'red')
         self.fakefood = self.canvas.create_rectangle(10 + self.fake[0][0]*self.size, 10 + self.fake[0][1]*self.size,(self.fake[0][0] + 1)*self.size - 10, (self.fake[0][1] + 1)*self.size - 10,fill = 'orange')
-        self.mouse = self.canvas.create_oval(10, 10, 10 + self.size - 20, 10 + self.size - 20, fill = 'black')
-#        self.barriers = self.canvas.create_rectangle(10 + 3*self.size, 10 + 3*self.size,
-#                                                 (3 + 1)*self.size - 10, (3 + 1)*self.size - 10, 
-#                                                 fill = 'blue')
+        self.mouse = self.canvas.create_oval(10 + self.start[0]*self.size, 10 + self.start[1]*self.size, 10 + self.start[0]*self.size + self.size - 20, 10 +self.start[1]*self.size + self.size - 20, fill = 'black')
+#       self.barriers = self.canvas.create_rectangle(10 + self.barriers[0][0]*self.size, 10 + self.barriers[0][1]*self.size,(self.barriers[0][0] + 1)*self.size - 10, (self.barriers[0][1] + 1)*self.size - 10,fill = 'gray')
         # pack all
         self.canvas.pack()
 
@@ -78,9 +79,7 @@ class Maze(tk.Tk, object):
         self.update()
         time.sleep(0.5)
         self.canvas.delete(self.mouse)
-        self.mouse = self.canvas.create_oval(10, 10, 
-                                             10 + self.size - 20, 10 + self.size - 20, 
-                                             fill = 'black')
+        self.mouse = self.canvas.create_oval(10 + self.start[0]*self.size, 10 + self.start[1]*self.size, 10 + self.start[0]*self.size + self.size - 20, 10 +self.start[1]*self.size + self.size - 20, fill = 'black')
 #        mouse_file = tk.PhotoImage(file='mouse.gif')
 #        self.mouse = self.canvas.create_image(10, 10, anchor='nw', image = mouse_file)
         # return observation
@@ -88,7 +87,7 @@ class Maze(tk.Tk, object):
         
     def move_to(self, action):
         self.update()
-        time.sleep(0.05)
+        time.sleep(0.02)
         if action == ID_ACTIONS[0]:
             self.canvas.move(self.mouse, -self.size, 0)
         elif action == ID_ACTIONS[1]:
@@ -195,7 +194,7 @@ class Observer(object):
         if new_state in GOALS:
             r = 1
         else:
-            r = 0.01 * (2*(self.distance(state, GOALS[0]) - self.distance(new_state, GOALS[0])) + (self.distance(state, FAKE[0]) - self.distance(new_state, FAKE[0])))
+            r = 0.01 * ((self.distance(state, GOALS[0]) - self.distance(new_state, GOALS[0])) + (self.distance(state, FAKE[0]) - self.distance(new_state, FAKE[0])))
         
         return new_state, r
 
@@ -290,18 +289,18 @@ class N_Step_Sarsa_Agent(RL_Agent):
 
 def run_agent():
     env.reset()
-    state = [0, 0]
+    state = START
     #action = RL.choose_action(str(state)) #Sarsa
     RL.simulation = False # Q learning
     
     while state not in GOALS:       
         action = RL.choose_action(str(state)) #Qlearning
         new_state, r = Obs.env_reaction(state, action)
-        #new_action = RL.choose_action(str(new_state))
-        RL.learn(str(state), action, r, str(new_state)) #Qlearning
-        #RL.learn(str(state), action, r, str(new_state), new_action) #Sarsa
+        new_action = RL.choose_action(str(new_state))
+        #RL.learn(str(state), action, r, str(new_state)) #Qlearning
+        RL.learn(str(state), action, r, str(new_state), new_action) #Sarsa
         state = new_state
-    #action = new_action #Sarsa
+        action = new_action #Sarsa
     print(RL.q_table)
             
 def training():
@@ -317,8 +316,8 @@ def training():
 if __name__ == "__main__":
     env = Maze(SIZE, X, Y)
     Obs = Observer(goals = env.goals, barriers = env.barriers)
-    RL = Qlearning_Agent()
-    #RL = Sarsa_Agent()
+    #RL = Qlearning_Agent()
+    RL = Sarsa_Agent()
     #RL = N_Step_Sarsa_Agent()
     training()
     #env.after(100, update)
