@@ -87,7 +87,7 @@ class Maze(tk.Tk, object):
         
     def move_to(self, action):
         self.update()
-        time.sleep(0.02)
+        time.sleep(0.1)
         if action == ID_ACTIONS[0]:
             self.canvas.move(self.mouse, -self.size, 0)
         elif action == ID_ACTIONS[1]:
@@ -152,9 +152,9 @@ class Qlearning_Agent:
         scores_of_actions = self.q_table.loc[state, :]
         myActions = scores_of_actions[scores_of_actions == np.max(scores_of_actions)].index
         #print(action, myActions)
-        r = -0.01
+        r = -0.1
         if (action in myActions):
-            r = 0
+            r = 0.1
         return r
 
     def check_state_exist(self, state):
@@ -179,25 +179,21 @@ class Qlearning_Agent:
 
 
 def ini_agent(agent):
-    env.reset()
+#载入已有的Q表可以省略此步骤
     state = START
     while state not in agent.goals:
         action = agent.choose_action(str(state))
         new_state, r = env.env_reaction(agent, state, action, False)
         agent.learn(str(state), action, r, str(new_state))
         state = new_state
+#输出Q表以供之后的学习载入
 
-            
-    #return q_table
 def iniTraining(agent):
-    for t in range(2*EPISODES):
-        env.reset()
-        env.render()
+    for t in range(3*EPISODES):
         ini_agent(agent)
-    env.reset()
+
 
 def run_agent(agent, observer):
-    env.reset()
     state = START
     while state not in agent.goals:
         action = agent.choose_action(str(state))
@@ -208,17 +204,16 @@ def run_agent(agent, observer):
         state = new_state
 
 def training(agent, observer):
-    for t in range(EPISODES//2):
-        env.reset()
-        env.render()
-        for j in range(EPISODES//2):
-            run_agent (agent, observer)
-            run_agent (observer, agent)
-            print ( j+1, " adversial episode finished")
+    show(agent, 5)
+    for j in range(EPISODES):
+        run_agent (agent, observer)
+        run_agent (observer, agent)
     print (agent.q_table)
+    #输出Q表供参考
 
-def show(agent):
-    for t in range (EPISODES):
+def show(agent,e):
+    agent.epsilon = 2
+    for t in range (e):
         env.reset()
         env.render()
         state = START
@@ -226,6 +221,8 @@ def show(agent):
             action = agent.choose_action(str(state))
             new_state, r = env.env_reaction(agent, state, action, True)
             state = new_state
+    agent.epsilon = EPSILON
+    env.reset()
 
 if __name__ == "__main__":
     env = Maze(SIZE, X, Y)
@@ -238,12 +235,11 @@ if __name__ == "__main__":
     print (RL.q_table)
     iniTraining(OB)
     print ("OB trained")
-    print (OB.q_table)
+    #print (OB.q_table)
     #env.after(100, update)
     RL.epsilon = EPSILON
     OB.epsilon = EPSILON
     training(RL,OB)
-    RL.epsilon = 2
-    show(RL)
+    show(RL,5)
     
 env.mainloop()
