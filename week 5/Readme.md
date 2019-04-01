@@ -1,4 +1,2 @@
 adversarial式的training，QLearning版本与SARSA版本均完成。
-效果不佳。
-QLearning版本会有奇怪的行为（向fake goal方向移动然后走回），SARSA版本运行到adversarial training部分时会无响应。
-运行很慢，希望可以添加Q表导入导出功能。
+基本搞定了运行卡死的问题，而且行为相对稳定。
