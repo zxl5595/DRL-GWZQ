@@ -396,5 +396,5 @@ if __name__ == "__main__":
         print('this is a good deceptive path')
     else:
         print('this is not a good deceptive path\n')    
-    print(EVA.cal_score())
+    print("the score of this path is " + str(EVA.cal_score()))
     env.mainloop()
