@@ -262,7 +262,7 @@ class eva(object):#1: score for early stopping 2: decide: deceptive path
 
 
     def decision(self):
-        if self.cal_score == 6:
+        if self.cal_score() == 6:
             return True
         else:
             return False
