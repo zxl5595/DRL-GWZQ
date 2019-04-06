@@ -207,7 +207,6 @@ class eva(object):#1: score for early stopping 2: decide: deceptive path
         cost = len(self.path)
         visited_LDP = False
         LDPs = []
-        opt = 0
         """
         for goal in self.real_goals:
             opt = self.distance(self.start, goal)
@@ -219,6 +218,7 @@ class eva(object):#1: score for early stopping 2: decide: deceptive path
         goal = self.real_goals[0]
         fake = self.fake_goals[0]
         LDPs = self.getLDP(self.start, goal, fake)
+        opt = self.distance(self.start, goal)
         e_LDP = 0
         e_cost = 0
         e_FTS = 0
@@ -231,7 +231,7 @@ class eva(object):#1: score for early stopping 2: decide: deceptive path
             if ldp in self.path:
                 visited_LDP = True
                 e_LDP = 0.5
-        if cost == opt and visited_LDP:
+        if cost == (opt-1) and visited_LDP:
             e_cost = 1
         if self.path[-1] in self.real_goals:
             e_finished = 0.5
