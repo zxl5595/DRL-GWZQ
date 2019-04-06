@@ -231,7 +231,7 @@ class eva(object):#1: score for early stopping 2: decide: deceptive path
             if ldp in self.path:
                 visited_LDP = True
                 e_LDP = 0.5
-        if cost == (opt-1) and visited_LDP:
+        if cost == (opt+1) and visited_LDP:
             e_cost = 1
         if self.path[-1] in self.real_goals:
             e_finished = 0.5
