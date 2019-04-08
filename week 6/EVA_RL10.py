@@ -296,25 +296,26 @@ def run_agent(agent, observer):
 
 def training(agent, observer):
     show(agent, 5)
-    #text = tk.Text(env, height = 10, width = 30)
-    #text.pack(side = 'left')
-    #times = 0
-    #text.insert(tk.INSERT, "Last Evaluation :" + str(0) + '\n')
+    text = tk.Text(env, height = 10, width = 30)
+    text.pack(side = 'left')
+    times = 0
+    text.insert(tk.INSERT, "Trained Times :"+str(times)+'\n' )
+    text.insert(tk.INSERT, "Last Evaluation :" + str(0))
     for j in range(EPISODES):
-        #text.insert(tk.INSERT, "Trained Times :"+str(times)+'\n' )
         run_agent (agent, observer)
         run_agent (observer, agent)
         temp_path = get_path(agent)
-        #times += 1
+        times += 1
         ENV = eva(path = temp_path)
+        text.delete(1.0,tk.END)
+        text.insert(tk.INSERT, "Trained Times :"+str(times)+'\n' )
+        text.insert(tk.INSERT, "Last Evaluation :" + str(ENV.cal_score()))
         if ENV.cal_score() >= 6:
             print('early stop')
             break
         else:
             continue
-        #text.delete(1.0,tk.END)
-        #text.insert(tk.INSERT, "Trained Times :"+str(times)+'\n' )
-        #text.insert(tk.INSERT, "Last Evaluation :" + str(ENV.cal_score()) + '\n')
+       
         
     print (agent.q_table)
     print(ENV.cal_score())
