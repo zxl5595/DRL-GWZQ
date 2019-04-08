@@ -323,8 +323,8 @@ def training(agent, observer):
 
 
 def show(agent,e):
-    text = tk.Text(env, height = 10, width = 30)
-    text.pack(side = 'left')
+    #text = tk.Text(env, height = 10, width = 30)
+    #text.pack(side = 'left')
     agent.epsilon = 2
     path = []
     for t in range (e):
