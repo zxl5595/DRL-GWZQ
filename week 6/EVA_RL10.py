@@ -297,7 +297,7 @@ def run_agent(agent, observer):
 def training(agent, observer):
     show(agent, 5)
     text = tk.Text(env, height = 10, width = 30)
-    text.pack(side = 'left')
+    text.pack(side = 'top')
     times = 0
     text.insert(tk.INSERT, "Trained Times :"+str(times)+'\n' )
     text.insert(tk.INSERT, "Last Evaluation :" + str(0))
@@ -324,8 +324,6 @@ def training(agent, observer):
 
 
 def show(agent,e):
-    #text = tk.Text(env, height = 10, width = 30)
-    #text.pack(side = 'left')
     agent.epsilon = 2
     path = []
     for t in range (e):
