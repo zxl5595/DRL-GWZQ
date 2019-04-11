@@ -25,7 +25,7 @@ SIZE = 100
 X = 9
 Y = 9
 WALLS = [[-X, -1], [-1, Y], [X, Y], [X, -1]]
-OBS = [[3,4]]
+OBS = [[3,3]]
 for i in range(0, X):
     WALLS = WALLS + [[i , -1]] + [[-1, i]] + [[i, Y]] + [[X, i]]
 BARRIERS = OBS + WALLS
@@ -252,13 +252,17 @@ def run_agent(agent, observer):
         action = agent.choose_action(str(state))
         while env.hitBarrier (state,action):
             action = agent.choose_action(str(state))
+        notLearning = False
         if env.seeObs(state):
             if not agent.observation:
                 action = observer.choose_action(str(state))
                 while env.hitBarrier (state,action):
                     action = agent.choose_action(str(state))
+                    notLearning = False
         new_state, r = env.env_reaction(agent, state, action, False)
-        if not (agent.findDistance(new_state,GOALS[0])+agent.findDistance(new_state,FAKE[0]) == agent.findDistance(GOALS[0],FAKE[0])):
+        if (agent.findDistance(new_state,GOALS[0])+agent.findDistance(new_state,FAKE[0]) == agent.findDistance(GOALS[0],FAKE[0])):
+            notLearning = True
+        if not notLearning:
             r += observer.myReward(str(state),action)
         agent.learn(str(state), action, r, str(new_state))
         state = new_state
