@@ -248,7 +248,6 @@ def run_agent(agent, observer):
         new_state, r = env.env_reaction(agent, state, action, False)
         if not (agent.findDistance(new_state,GOALS[0])+agent.findDistance(new_state,FAKE[0]) == agent.findDistance(GOALS[0],FAKE[0])):
             r += observer.myReward(str(state),action)
-        r -= 0.01 #discount factor
         agent.learn(str(state), action, r, str(new_state))
         state = new_state
 
