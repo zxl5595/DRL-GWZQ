@@ -106,7 +106,7 @@ class Maze(tk.Tk, object):
         
     def move_to(self, action):
         self.update()
-        time.sleep(0.01)
+        time.sleep(0.02)
         if action == ID_ACTIONS[0]:
             self.canvas.move(self.mouse, -self.size, 0)
         elif action == ID_ACTIONS[1]:
@@ -133,6 +133,13 @@ class Maze(tk.Tk, object):
         new_state = suc[action]
         if new_state in BARRIERS:
             return True
+        return False
+        
+    def seeObs(self,state):
+        suc = self.getSuccessor(state)
+        for next in suc:
+            if next in OBS:
+                return True
         return False
 
     def env_reaction(self, agent, state, action, show):
@@ -245,6 +252,11 @@ def run_agent(agent, observer):
         action = agent.choose_action(str(state))
         while env.hitBarrier (state,action):
             action = agent.choose_action(str(state))
+        if env.seeObs(state):
+            if not agent.observation:
+                action = observer.choose_action(str(state))
+                while env.hitBarrier (state,action):
+                    action = agent.choose_action(str(state))
         new_state, r = env.env_reaction(agent, state, action, False)
         if not (agent.findDistance(new_state,GOALS[0])+agent.findDistance(new_state,FAKE[0]) == agent.findDistance(GOALS[0],FAKE[0])):
             r += observer.myReward(str(state),action)
@@ -253,8 +265,8 @@ def run_agent(agent, observer):
 
 def training(agent, observer):
     t = 0
-    while (t < 1000):
-        show (agent,1)
+    while (t < 10*EPISODES):
+        show(agent,1)
         run_agent (agent, observer)
         run_agent (observer, agent)
         t += 1
@@ -267,10 +279,20 @@ def show(agent,e):
         env.reset()
         env.render()
         state = START
+        visited = []
+        duplicated = []
         while state not in agent.goals:
             action = agent.choose_action(str(state))
             new_state, r = env.env_reaction(agent, state, action, True)
             state = new_state
+            if state not in visited:
+                 visited.append(state)
+            elif state not in duplicated:
+                duplicated.append(state)
+            else:
+                env.reset()
+                break
+            
     agent.epsilon = EPSILON
     env.reset()
 
