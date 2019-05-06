@@ -2,7 +2,7 @@
 """
 Created on Fri Mar 24 15:13:00 2019
 @author: Zhibo QU
-Q learning agent with fake goal and observer
+Q learning agent with fake goal and observer, using simulation strategy.
 """
 
 import numpy as np
@@ -35,6 +35,19 @@ START = [3,0]
 FAKE = [[0,7]] #fake goal
 GOALS = [[8,5]]
 
+
+class Queue:
+    def __init__(self):
+        self.list = []
+
+    def push(self,item):
+        self.list.insert(0,item)
+
+    def pop(self):
+        return self.list.pop()
+
+    def isEmpty(self):
+        return len(self.list) == 0
         
 class Maze(tk.Tk, object):
     def __init__(self, size, x, y):
@@ -93,7 +106,7 @@ class Maze(tk.Tk, object):
         
     def move_to(self, action):
         self.update()
-        time.sleep(0.03)
+        time.sleep(0.1)
         if action == ID_ACTIONS[0]:
             self.canvas.move(self.mouse, -self.size, 0)
         elif action == ID_ACTIONS[1]:
@@ -121,19 +134,10 @@ class Maze(tk.Tk, object):
         if new_state in BARRIERS:
             return True
         return False
-        
-    def seeObs(self,state):
-        suc = self.getSuccessor(state)
-        for next in suc:
-            if next in OBS:
-                return True
-        return False
 
     def env_reaction(self, agent, state, action, show):
         suc = self.getSuccessor(state)
         new_state = suc[action]
-        if new_state in BARRIERS:
-            new_state = state
         if new_state not in agent.goals:
             r = 0
         else:
@@ -197,20 +201,25 @@ class Qlearning_Agent:
             q_target = r  # next state is terminal
         self.q_table.loc[state, action] += self.lr * (q_target - q_predict)
 
-    def path(self):
-        self.epsilon = 2
-        state = FAKE[0]
-        if self.observation:
-            state = GOALS[0]
-        path = [state]
-        while state not in self.goals:
-            action  = self.choose_action(str(state))
-            new_state,r = env.env_reaction(self,state,action,False)
-            state = new_state
-            path.append(state)
-        self.epsilon = EPSILON
-        return path
-
+    def findDistance(self,startState, finalState):
+        positions = Queue()
+        paths = Queue()
+        pathToPosition = []
+        visited = []
+        positions.push(startState)
+        currentState = positions.pop()
+        while not (currentState == finalState):
+            if currentState not in visited:
+                visited.append(currentState)
+                suc = env.getSuccessor(currentState)
+                for st in suc:
+                    if ((st not in visited) and (st not in BARRIERS)):
+                        path = pathToPosition + [st]
+                        positions.push(st)
+                        paths.push(path)
+            currentState = positions.pop()
+            pathToPosition = paths.pop()
+        return len(pathToPosition)
         
 
 def ini_agent(agent):
@@ -232,32 +241,30 @@ def iniTraining(agent):
 
 def run_agent(agent, observer):
     state = START
+    while state not in observer.goals:
+        action = observer.choose_action(str(state))
+        while env.hitBarrier (state,action):
+            action = observer.choose_action(str(state))
+        new_state, r = env.env_reaction(agent, state, action, False)
+        r += observer.myReward(str(state),action)
+        agent.learn(str(state), action, r, str(new_state))
+        state = new_state
     while state not in agent.goals:
         action = agent.choose_action(str(state))
         while env.hitBarrier (state,action):
             action = agent.choose_action(str(state))
         new_state, r = env.env_reaction(agent, state, action, False)
-        notLearning = False
-        if new_state in PATH:
-            notLearning = True
-        if env.seeObs(state):
-            if agent.observation:
-                notLearning = True
-        if not notLearning:
-            r += observer.myReward(str(state),action)
         agent.learn(str(state), action, r, str(new_state))
         state = new_state
-
 
 def training(agent, observer):
     t = 0
     while (True):
-        show(agent,1)
+        #show (agent,1)
         run_agent (agent, observer)
-        run_agent (observer, agent)
+        #run_agent (observer, agent)
         t += 1
-        print (t, "completed.")
-    print(agent.q_table)
+        print(t, " completed")
 
 
 def show(agent,e):
@@ -291,17 +298,12 @@ if __name__ == "__main__":
     OB.epsilon = 0
     print ("Initializing...")
     iniTraining(RL)
-    PATH1 = RL.path()
     print (RL.q_table)
     iniTraining(OB)
-    PATH2 = OB.path()
     print (OB.q_table)
-    PATH = PATH1+PATH2
-    print(PATH)
     RL.epsilon = EPSILON
     OB.epsilon = EPSILON
     training(RL,OB)
-    print ("Traing ended. Show?")
-    input()
     show(RL,1)
-    env.mainloop()
+    
+env.mainloop()
