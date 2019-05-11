@@ -32,22 +32,9 @@ BARRIERS = OBS + WALLS
 #print(len(BARRIERS))
 #GOALS = [[5,5]]
 START = [3,0]
-FAKE = [[0,7]] #fake goal
-GOALS = [[8,5]]
+FAKE = [[0,2]] #fake goal
+GOALS = [[8,5,True]]
 
-
-class Queue:
-    def __init__(self):
-        self.list = []
-
-    def push(self,item):
-        self.list.insert(0,item)
-
-    def pop(self):
-        return self.list.pop()
-
-    def isEmpty(self):
-        return len(self.list) == 0
         
 class Maze(tk.Tk, object):
     def __init__(self, size, x, y):
@@ -106,7 +93,7 @@ class Maze(tk.Tk, object):
         
     def move_to(self, action):
         self.update()
-        time.sleep(0.1)
+        time.sleep(0.03)
         if action == ID_ACTIONS[0]:
             self.canvas.move(self.mouse, -self.size, 0)
         elif action == ID_ACTIONS[1]:
@@ -126,11 +113,16 @@ class Maze(tk.Tk, object):
         right = [new_state[0] + 1,new_state[1]]
         up = [new_state[0],new_state[1] - 1]
         down = [new_state[0],new_state[1] + 1]
+        if len(new_state) > 2:
+            left = left + [True]
+            right = right + [True]
+            up = up + [True]
+            down = down + [True]			
         return [left,right,up,down]
 
     def hitBarrier(self,state,action):
         suc = self.getSuccessor(state)
-        new_state = suc[action]
+        new_state = [suc[action][0],suc[action][1]]
         if new_state in BARRIERS:
             return True
         return False
@@ -178,7 +170,7 @@ class Qlearning_Agent:
         #print(action, myActions)
         r = -0.2
         if (action in myActions):
-            r = 0.2
+            r = 0.5
         return r
 
     def check_state_exist(self, state):
@@ -201,30 +193,13 @@ class Qlearning_Agent:
             q_target = r  # next state is terminal
         self.q_table.loc[state, action] += self.lr * (q_target - q_predict)
 
-    def findDistance(self,startState, finalState):
-        positions = Queue()
-        paths = Queue()
-        pathToPosition = []
-        visited = []
-        positions.push(startState)
-        currentState = positions.pop()
-        while not (currentState == finalState):
-            if currentState not in visited:
-                visited.append(currentState)
-                suc = env.getSuccessor(currentState)
-                for st in suc:
-                    if ((st not in visited) and (st not in BARRIERS)):
-                        path = pathToPosition + [st]
-                        positions.push(st)
-                        paths.push(path)
-            currentState = positions.pop()
-            pathToPosition = paths.pop()
-        return len(pathToPosition)
         
 
 def ini_agent(agent):
 
-    state = START
+    state = FAKE[0] + [True]
+    if agent.observation:
+        state = START
     while state not in agent.goals:
         action = agent.choose_action(str(state))
         while env.hitBarrier (state,action):
@@ -249,6 +224,7 @@ def run_agent(agent, observer):
         r += observer.myReward(str(state),action)
         agent.learn(str(state), action, r, str(new_state))
         state = new_state
+    state = state + [True]
     while state not in agent.goals:
         action = agent.choose_action(str(state))
         while env.hitBarrier (state,action):
@@ -260,7 +236,7 @@ def run_agent(agent, observer):
 def training(agent, observer):
     t = 0
     while (True):
-        #show (agent,1)
+        show (agent,1)
         run_agent (agent, observer)
         #run_agent (observer, agent)
         t += 1
@@ -279,6 +255,8 @@ def show(agent,e):
             action = agent.choose_action(str(state))
             new_state, r = env.env_reaction(agent, state, action, True)
             state = new_state
+            if state in FAKE:
+                state = state + [True]
             if state not in visited:
                  visited.append(state)
             elif state not in duplicated:
