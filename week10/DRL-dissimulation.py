@@ -2,7 +2,7 @@
 """
 Created on Fri Mar 24 15:13:00 2019
 @author: Zhibo QU
-Q learning agent with fake goal and observer, using simulation strategy.
+Q learning agent with fake goal and observer
 """
 
 import numpy as np
@@ -28,25 +28,20 @@ SIZE = 40
 X = 15
 Y = 15
 WALLS = [[-X, -1], [-1, Y], [X, Y], [X, -1]]
-OBS = [[4,5], [11,11], [5,5], [5,4], [11,12], [12,11], [13,11], [14, 11], [11,13]]
+OBS = [[6,6], [5,6], [4,6], [6,10],[5,10]]
 for i in range(0, X):
     WALLS = WALLS + [[i , -1]] + [[-1, i]] + [[i, Y]] + [[X, i]]
 BARRIERS = OBS + WALLS
 #print(len(BARRIERS))
 #GOALS = [[5,5]]
-START = [3,0]
-FAKE = [[14,12]] #fake goal
-GOALS = [[4,4,True]]
-goal = [4,4]
-#Point = [0,6]
-#final_actions = []
-#final_path = [START]
-
+START = [6,0]
+FAKE = [[0,13]] #fake goal
+GOALS = [[11,14]]
 
 def distance (position1, position2):
     dist = abs(position1[0] - position2[0]) + abs(position1[1]-position2[1])
     return dist
-
+    
 while True:
     random_x = np.random.randint(0, X-1, 3)
     random_y = np.random.randint(0, Y-1, 3)
@@ -72,19 +67,17 @@ while True:
     break
 #START = random_s
 #FAKE = [random_f] #fake goal
-#goal = random_r
-#GOALS = [random_r + [True]]
+#GOALS = [random_r]
 
 Point = [0,6]
 final_actions = []
 final_path = [START]
 
-        
+
 class Maze(tk.Tk, object):
     def __init__(self, size, x, y):
         super(Maze, self).__init__()
-        self.title('maze')
-        self.start = START
+        self.title('maze')              
         self.goals = GOALS
         self.fake = FAKE
         self.obstacle = OBS
@@ -93,6 +86,7 @@ class Maze(tk.Tk, object):
         self.x_total = x
         self.y_total = y
         self.geometry('1800x900')
+        self.start = START
         self._build_maze()
         
         
@@ -157,23 +151,27 @@ class Maze(tk.Tk, object):
         right = [new_state[0] + 1,new_state[1]]
         up = [new_state[0],new_state[1] - 1]
         down = [new_state[0],new_state[1] + 1]
-        if len(new_state) > 2:
-            left = left + [True]
-            right = right + [True]
-            up = up + [True]
-            down = down + [True]			
         return [left,right,up,down]
 
     def hitBarrier(self,state,action):
         suc = self.getSuccessor(state)
-        new_state = [suc[action][0],suc[action][1]]
+        new_state = suc[action]
         if new_state in BARRIERS:
             return True
+        return False
+        
+    def seeObs(self,state):
+        suc = self.getSuccessor(state)
+        for next in suc:
+            if next in OBS:
+                return True
         return False
 
     def env_reaction(self, agent, state, action, show):
         suc = self.getSuccessor(state)
         new_state = suc[action]
+        if new_state in BARRIERS:
+            new_state = state
         if new_state not in agent.goals:
             r = 0
         else:
@@ -214,7 +212,7 @@ class Qlearning_Agent:
         #print(action, myActions)
         r = -0.2
         if (action in myActions):
-            r = 0.5
+            r = 0.2
         return r
 
     def check_state_exist(self, state):
@@ -237,13 +235,25 @@ class Qlearning_Agent:
             q_target = r  # next state is terminal
         self.q_table.loc[state, action] += self.lr * (q_target - q_predict)
 
+    def path(self):
+        self.epsilon = 2
+        state = FAKE[0]
+        if self.observation:
+            state = GOALS[0]
+        path = [state]
+        while state not in self.goals:
+            action  = self.choose_action(str(state))
+            new_state,r = env.env_reaction(self,state,action,False)
+            state = new_state
+            path.append(state)
+        self.epsilon = EPSILON
+        return path
+
         
 
 def ini_agent(agent):
 
-    state = FAKE[0] + [True]
-    if agent.observation:
-        state = START
+    state = START
     while state not in agent.goals:
         action = agent.choose_action(str(state))
         while env.hitBarrier (state,action):
@@ -258,38 +268,37 @@ def iniTraining(agent):
         ini_agent(agent)
 
 
-def run_agent(agent, observer):
+def run_agent(agent, observer,PATH):
     state = START
-    while state not in observer.goals:
-        action = observer.choose_action(str(state))
-        while env.hitBarrier (state,action):
-            action = observer.choose_action(str(state))
-        new_state, r = env.env_reaction(agent, state, action, False)
-        r += observer.myReward(str(state),action)
-        agent.learn(str(state), action, r, str(new_state))
-        state = new_state
-    state = state + [True]
     while state not in agent.goals:
         action = agent.choose_action(str(state))
         while env.hitBarrier (state,action):
             action = agent.choose_action(str(state))
         new_state, r = env.env_reaction(agent, state, action, False)
+        notLearning = False
+        if new_state in PATH:
+            notLearning = True
+        if env.seeObs(state):
+            if agent.observation:
+                notLearning = True
+        if not notLearning:
+            r += observer.myReward(str(state),action)
         agent.learn(str(state), action, r, str(new_state))
         state = new_state
 
-def training(agent, observer):
+
+def training(agent, observer,PATH):
     t = 0
-    while (t < 10):
-        show (agent,1, True)
-        run_agent (agent, observer)
-        #run_agent (observer, agent)
+    while (t < 100):
+        #show(agent,1)
+        run_agent (agent, observer,PATH)
+        run_agent (observer, agent,PATH)
         t += 1
-        print(t, " completed")
-        print(final_path)
+        #print (t, "completed.")
+    print(agent.q_table)
 
 
-def show(agent,e, Final):
-    print('ddd')
+def show(agent,e):
     agent.epsilon = 2
     for t in range (e):
         env.reset()
@@ -300,23 +309,17 @@ def show(agent,e, Final):
         while state not in agent.goals:
             action = agent.choose_action(str(state))
             new_state, r = env.env_reaction(agent, state, action, True)
-            state = new_state
-            if t == 0 and not Final:
+            if t == 0:
                 final_actions.append(ACTIONS[action])
-                if len(state) == 2:
-                    final_path.append(state)
-                elif len(state) == 3:
-                    final_path.append(state[:2])
-            if state in FAKE:
-                state = state + [True]
+                final_path.append(new_state)            
+            state = new_state
             if state not in visited:
-                visited.append(state)
+                 visited.append(state)
             elif state not in duplicated:
                 duplicated.append(state)
             else:
                 env.reset()
                 break
-    print(final_path)
             
     agent.epsilon = EPSILON
     env.reset()
@@ -336,7 +339,7 @@ def cosdiff_act(state,next_state,start,goal,fake):
     cosdiff_fake_nst = distance(next_state,fake) - distance(start,fake)
     return (cosdiff_goal_st,cosdiff_goal_nst,cosdiff_fake_st,cosdiff_fake_nst)
 
-def experiment(START, FAKE, goal, final_path,final_actions,file_name):
+def experiment(START, FAKE, GOALS, final_path,file_name):
     actions = []
     for i in range(len(final_path) - 1):
         actions.append([final_path[i], final_path[i + 1]])
@@ -362,7 +365,7 @@ def experiment(START, FAKE, goal, final_path,final_actions,file_name):
     
     for i in range(len(actions)):
         states =actions[i]
-        cosdiff_goal_st,cosdiff_goal_nst,cosdiff_fake_st,cosdiff_fake_nst = cosdiff_act(states[0],states[1],START,goal,FAKE[0])
+        cosdiff_goal_st,cosdiff_goal_nst,cosdiff_fake_st,cosdiff_fake_nst = cosdiff_act(states[0],states[1],START,GOALS[0],FAKE[0])
         if (cosdiff_goal_st <= cosdiff_goal_nst) and (cosdiff_fake_st > cosdiff_fake_nst):
             count_sim_act += 1
             act_list.append("Sim")
@@ -377,7 +380,7 @@ def experiment(START, FAKE, goal, final_path,final_actions,file_name):
                 first_find_act = True
     
     for i in range(len(final_path)):
-        cosdiff_goal,cosdiff_fake = cosdiff_st(final_path[i],START,goal,FAKE[0])
+        cosdiff_goal,cosdiff_fake = cosdiff_st(final_path[i],START,GOALS[0],FAKE[0])
         if cosdiff_goal > cosdiff_fake:
             count_sim_st += 1
             st_list.append("Sim")
@@ -422,6 +425,7 @@ def experiment(START, FAKE, goal, final_path,final_actions,file_name):
     if not f:
         last_deceptive_act.append(final_path[-2])
         last_deceptive_act.append(final_path[-1])
+
         
 
     
@@ -447,38 +451,40 @@ def experiment(START, FAKE, goal, final_path,final_actions,file_name):
     print ("first truthful state: ",first_truthful_state)
     print ("action list: ", act_list)
     print ("state list: ", st_list)
-    print ("(s, f, r): ", (START, FAKE, goal))
+    print ("(s, f, r): ", (START, FAKE, GOALS[0]))
 
-    result_dict = {'Step amount':str(count_actions+1),'Truthful state amount':str(count_true_st),'Truthful action amount':str(count_true_act),'Simulation state amount':str(count_sim_st),'Simulation action amount':str(count_sim_act),'Dissimulation state amount':str(count_dissim_st),'Dissimulation action amount':str(count_dissim_act),'Last Deceptive state':str(last_deceptive_st),'Last Deceptive action':str(last_deceptive_act),'action':str((rate_dissim_act, rate_sim_act,rate_true_act)),'state':str((rate_dissim_st,rate_sim_st,rate_true_st)),'first truthful act':str(first_truthful_act),'first truthful state':str(first_truthful_state),'action list':str(act_list),'state list':str(st_list),'(s, f, r)':str((START, FAKE, goal))}
+    result_dict = {'Step amount':str(count_actions+1),'Truthful state amount':str(count_true_st),'Truthful action amount':str(count_true_act),'Simulation state amount':str(count_sim_st),'Simulation action amount':str(count_sim_act),'Dissimulation state amount':str(count_dissim_st),'Dissimulation action amount':str(count_dissim_act),'Last Deceptive state':str(last_deceptive_st),'Last Deceptive action':str(last_deceptive_act),'action':str((rate_dissim_act, rate_sim_act,rate_true_act)),'state':str((rate_dissim_st,rate_sim_st,rate_true_st)),'first truthful act':str(first_truthful_act),'first truthful state':str(first_truthful_state),'action list':str(act_list),'state list':str(st_list),'(s, f, r)':str((START, FAKE, GOALS[0])),'final path': str(final_path),'final action':str(final_actions)}
     result_json = json.dumps(result_dict)
 
     with open (file_name,'w') as f:
         f.write(result_json)
-    
+
     return None
 
-def main(exp,exp_count):
+def main(exp_count):
     count = 3
     for i in range(count):
         index = str(i+1)
-        file_name = 'result/' + str(exp_count) + '_' + index + '.json'
+        file_name = './result_dis/' + str(exp_count) + '_' + index + '.json'
         #os.mknod('./' + file_name)
-
-        #env = Maze(SIZE, X, Y)
         RL = Qlearning_Agent(False)
         OB = Qlearning_Agent(True)
         RL.epsilon = 0
         OB.epsilon = 0
         print ("Initializing...")
         iniTraining(RL)
+        PATH1 = RL.path()
         print (RL.q_table)
         iniTraining(OB)
+        PATH2 = OB.path()
         print (OB.q_table)
+        PATH = PATH1+PATH2
+        print(PATH)
         RL.epsilon = EPSILON
         OB.epsilon = EPSILON
-        training(RL,OB)
-        show(RL,1, False)
-        experiment(START, FAKE, goal, final_path,final_actions,file_name)
+        training(RL,OB,PATH)
+        show(RL,1)
+        experiment(START, FAKE, GOALS, final_path,file_name)
         print ("final path: ",final_path)
     env.destroy()
     env.mainloop()
@@ -497,13 +503,12 @@ if __name__ == "__main__":
             START = exp["start"]
             FAKE = [exp["fake"]] #fake goal
             goal = exp["real"]
-            goal_x = goal[0]
-            goal_y = goal[1]
-            GOALS = [[goal_x,goal_y,True]]
+            GOALS = [goal]
             OBS = exp["wall"]
             env = Maze(SIZE, x, y)
-            main(exp,exp_count)
+            main(exp_count)
             exp_count = exp_count + 1
+
 #    env = Maze(SIZE, X, Y)
 #    RL = Qlearning_Agent(False)
 #    OB = Qlearning_Agent(True)
@@ -511,76 +516,19 @@ if __name__ == "__main__":
 #    OB.epsilon = 0
 #    print ("Initializing...")
 #    iniTraining(RL)
+#    PATH1 = RL.path()
 #    print (RL.q_table)
 #    iniTraining(OB)
+#    PATH2 = OB.path()
 #    print (OB.q_table)
+#    PATH = PATH1+PATH2
+#    print(PATH)
 #    RL.epsilon = EPSILON
 #    OB.epsilon = EPSILON
 #    training(RL,OB)
-#    show(RL,1, False)
-#    experiment(START, FAKE, goal, final_path)
+#    #print ("Traing ended. Show?")
+#    #input()
+#    show(RL,1)
+#    experiment(START, FAKE, GOALS, final_path)
 #    print ("final path: ",final_path)
-#    env.destroy()
 #    env.mainloop()
-
-
-"""
-if __name__ == "__main__":    
-    for t in range(5):
-        while True:
-            random_x = np.random.randint(0, X-1, 3)
-            random_y = np.random.randint(0, Y-1, 3)
-            random_s = [random_x[0], random_y[0]]
-            random_f = [random_x[1], random_y[1]]
-            random_r = [random_x[2], random_y[2]]
-            random_list = [random_s, random_f, random_r]
-       
-            #######
-            for i in range(len(random_list)):
-                if random_list.count(random_list[i]) == 1:
-                    pass
-                else:
-                    continue
-            ############
-            
-            if (distance(random_list[0],random_list[1])>=(X+Y)/3) and (distance(random_list[1],random_list[2])>=(X+Y)/3) and (distance(random_list[0],random_list[2])>=(X+Y)/3):
-                for i in range(len(random_list)):
-                    if random_list.count(random_list[i]) == 1:
-                        pass
-                    else:
-                        continue
-            else:
-                continue
-            break
-            
-        start = random_s
-        fake = [random_f] #fake goal
-        goals = [random_r + [True]]
-        env = Maze(SIZE, X, Y, start, fake, goals)
-        
-        RL = Qlearning_Agent(False)
-        OB = Qlearning_Agent(True)
-        RL.epsilon = 0
-        OB.epsilon = 0
-        print ("Initializing...")
-        iniTraining(RL)
-        print (RL.q_table)
-        iniTraining(OB)
-        print (OB.q_table)
-        RL.epsilon = EPSILON
-        OB.epsilon = EPSILON
-        training(RL,OB)
-        show(RL,1)
-        print('env.start, env.fake, env.goals')
-        result = str(env.start) + str(env.fake) + str(env.goals)
-        print(result)
-        f = open('result.txt', 'a')
-        f.write(str(t))
-        f.write('th\n')
-        f.write(result)
-        f.write('\n')
-        f.close()
-        env.destroy()
-        print("destroyed")
-        env.mainloop()
-        """
